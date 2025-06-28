@@ -11,7 +11,11 @@ class AppsService {
             guard let bundleURL = app.bundleURL else {
                 return nil
             }
-            
+
+            if bundleURL.path.hasPrefix("/System") {
+                return nil
+            }
+
             return App(
                 name: app.localizedName ?? "Unknown",
                 bundleIdentifier: bundleIdentifier,

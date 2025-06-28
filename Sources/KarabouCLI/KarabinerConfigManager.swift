@@ -11,14 +11,17 @@ class KarabinerConfigManager {
         self.destinationRuleName = destinationRuleName
 
         var keysWithDuplicateMappings: [String] = []
+        var profilesWithDuplicateMappings: [String] = []
         for profile in karabinerConfig.profiles {
             for rule in profile.complexModifications.rules {
                 for manipulator in rule.manipulators {
+
                     let hash = getKeyAndModifierHash(
                         keyCode: manipulator.from.keyCode,
                         modifier: manipulator.from.modifiers?.mandatory?.first ?? "")
                     if mappedKeyAndModifier.contains(hash) {
                         keysWithDuplicateMappings.append(hash)
+                        profilesWithDuplicateMappings.append(profile.name)
                     } else {
                         mappedKeyAndModifier.insert(hash)
                     }
@@ -27,7 +30,7 @@ class KarabinerConfigManager {
         }
 
         if keysWithDuplicateMappings.count > 0 {
-            print("Warning: KeyCode \(keysWithDuplicateMappings) already mapped")
+            print("Warning: KeyCode \(keysWithDuplicateMappings) already mapped in profiles \(profilesWithDuplicateMappings)")
         }
     }
 
@@ -101,8 +104,6 @@ class KarabinerConfigManager {
         _isModified = true
     }
 
-    // should still check across rules to make sure there are not duplicate mappings
-    // if there are throw an error.
     public func hasManipulator(keyCode: String, modifier: String) -> Bool {
         return mappedKeyAndModifier.contains(getKeyAndModifierHash(keyCode: keyCode, modifier: modifier))
     }

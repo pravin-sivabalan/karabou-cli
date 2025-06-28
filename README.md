@@ -1,4 +1,4 @@
-# Karabiner CLI
+# Karabou CLI
 
 ### Problem
 
@@ -23,8 +23,14 @@ Sample usage:
 * `karabou add --key-code z --app-name "Google Chrome"`
 * `karabou remove --key-code z`
 
-Default --modifier: right_command
-Default --config-path: ~/.config/karabiner/karabiner.json 
+Default `--modifier: right_command`
+Default `--config-path: ~/.config/karabiner/karabiner.json`
+
+### Bugs
+- [] Restarting karabiner results in an error message even when it works: "Could not find service "org.pqrs.karabiner.karabiner_console_user_server" in domain for user gui: 501"
+- [] Multiple KarabouManaged-OpenApps when there should always only be one
+- [] Duplicate key code + modifiers keep getting identified
+- [] Broken tests
 
 ### Notes
 * KarabinerConfig: Responsible for updating the KarabinerConfig. It will read/write to the configuration file and restart the app.
