@@ -20,8 +20,8 @@ It will also restart the Karabiner Elements application so that the update confi
 ### Usage
 
 Sample usage:
-* karabou add --key-code z --app-name "Google Chrome" 
-* karabou remove --key-code z
+* `karabou add --key-code z --app-name "Google Chrome"`
+* `karabou remove --key-code z`
 
 Default --modifier: right_command
 Default --config-path: ~/.config/karabiner/karabiner.json 
