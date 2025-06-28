@@ -41,7 +41,9 @@ class AppsService {
                appName.lowercased().contains("background") ||
                appName.lowercased().contains("agent") ||
                appName.lowercased().contains("daemon") ||
-               appName.lowercased().contains("service") {
+               appName.lowercased().contains("service") ||
+               appName.lowercased().contains("plugin") ||
+               appName.lowercased().contains("extension") {
                 return nil
             }
 

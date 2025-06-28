@@ -54,7 +54,8 @@ struct KarabouCLI: ParsableCommand {
                 try handleListAction(configUrl: url)
             }
         } catch let error as KarabouError {
-            Noora().error(.alert(error.localizedDescription))
+            let errorMessage = TerminalText(stringLiteral: error.localizedDescription)
+            Noora().error(.alert(errorMessage))
             throw ExitCode.failure
         } catch {
             Noora().error(.alert("An unexpected error occurred: \(error.localizedDescription)"))
