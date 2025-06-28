@@ -122,7 +122,7 @@ class KarabouCLITests: XCTestCase {
 
         manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
         
-        XCTAssertEqual(manager.hasManipulator(keyCode: "z"), true)
+        XCTAssertEqual(manager.hasManipulator(keyCode: "z", modifier: "right_command"), true)
     }
 
     func testConfigManager_removeAppOpen() throws {
@@ -133,7 +133,7 @@ class KarabouCLITests: XCTestCase {
         manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
         manager.remove(keyCode: "z", modifier: "right_command")
 
-        XCTAssertEqual(manager.hasManipulator(keyCode: "z"), false)
+        XCTAssertEqual(manager.hasManipulator(keyCode: "z", modifier: "right_command"), false)
     }
 
     func testGoldenDiff1() throws {

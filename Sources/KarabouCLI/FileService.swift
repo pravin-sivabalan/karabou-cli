@@ -2,6 +2,7 @@ import Foundation
 
 class FileService {
     public static func readJsonFile<T: Decodable>(url: URL) throws -> T {
+        print("Reading JSON file from \(url)")
         let data = try! Data(contentsOf: url)
         let decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase

@@ -4,12 +4,12 @@ import AppKit
 
 class AppsService {
     public static func getRunningApps() throws -> [App] {
-        let apps = try NSWorkspace.shared.runningApplications.compactMap { app in
+        let apps: [App] = NSWorkspace.shared.runningApplications.compactMap { app in
             guard let bundleIdentifier = app.bundleIdentifier else {
-                throw KarabouError.bundleIdentifierNotFound
+                return nil
             }
             guard let bundleURL = app.bundleURL else {
-                throw KarabouError.bundleURLNotFound
+                return nil
             }
             
             return App(
