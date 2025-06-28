@@ -17,8 +17,18 @@ It will also restart the Karabiner Elements application so that the update confi
 * Actions other than app opens
 * Key-code validation
 
+### Usage
+
+Sample usage:
+* karabou add --key-code z --modifier right_command --app-name "Google Chrome" 
+* karabou remove --key-code z --modifier right_command
+
+A custom config path can be provided with --config-path otherwise the default path is used:
+* karabou --config-path ~/.config/karabiner/karabiner.json add --key-code z --modifier right_command --app-name "Google Chrome" 
+
+
 ### Design Notes
 * KarabinerConfig: Responsible for updating the KarabinerConfig. It will read/write to the configuration file and restart the app.
 * AppFetcher: Gets a list of apps either through the looking through files or getting a list of active apps.
 FuzzyMatcher: Searches for a target string, with fuzzy matching, in a list of strings.
-* Path for config : ~/.config/karabiner/assets/complex_modifications
+* Path for config : ~/.config/karabiner/karabiner.json
