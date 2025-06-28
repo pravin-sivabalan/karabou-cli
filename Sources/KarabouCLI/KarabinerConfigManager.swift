@@ -35,7 +35,7 @@ class KarabinerConfigManager {
         }
     }
 
-    public func addAppOpen(keyCode: String, modifier: String, app: App) {
+    public func addAppOpen(keyCode: String, modifier: String, app: App, forceOverwrite: Bool = false) {
         if modifier != "right_command" {
             // TODO: throw an error
             print("Warning: Modifier \(modifier) not supported")
@@ -43,9 +43,14 @@ class KarabinerConfigManager {
         }
 
         let hash = encodeKeyAndModifier(keyCode: keyCode, modifier: modifier)
-        guard !mappedKeyAndModifier.contains(hash) else {
+        if mappedKeyAndModifier.contains(hash) && !forceOverwrite {
             // TODO: throw an error, caller should remove first
             return
+        }
+
+        // If we're force overwriting, remove the existing mapping first
+        if mappedKeyAndModifier.contains(hash) && forceOverwrite {
+            remove(keyCode: keyCode, modifier: modifier)
         }
 
         var newRules = karabinerConfig.profiles.first?.complexModifications.rules ?? []
@@ -129,6 +134,11 @@ class KarabinerConfigManager {
 
     public func isModified() -> Bool {
         return _isModified
+    }
+
+    public func getExistingApp(keyCode: String, modifier: String) -> String? {
+        let hash = encodeKeyAndModifier(keyCode: keyCode, modifier: modifier)
+        return mappings[hash]
     }
 
     private func createManipulator(keyCode: String, modifier: String, app: App) -> Manipulator {

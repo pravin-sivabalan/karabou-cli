@@ -93,7 +93,25 @@ struct KarabouCLI: ParsableCommand {
 
             let manager = KarabinerConfigManager(
                 karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
-            manager.addAppOpen(keyCode: keyCode!, modifier: modifier, app: app)
+                
+            // Check if mapping already exists
+            if let existingAppBundleId = manager.getExistingApp(keyCode: keyCode!, modifier: modifier) {
+                let confirmationMessage = 
+                    "A mapping already exists for \(keyCode!) + \(modifier) → \(existingAppBundleId).\nDo you want to remove the existing mapping and add the new one?"
+                let confirmation = Noora().yesOrNoChoicePrompt(
+                    question: TerminalText(stringLiteral: confirmationMessage))
+                
+                if !confirmation {
+                    print("Operation cancelled. Existing mapping was not changed.")
+                    return
+                }
+                
+                // User confirmed, so we'll overwrite
+                manager.addAppOpen(keyCode: keyCode!, modifier: modifier, app: app, forceOverwrite: true)
+            } else {
+                // No existing mapping, proceed normally
+                manager.addAppOpen(keyCode: keyCode!, modifier: modifier, app: app)
+            }
 
             try FileService.writeJsonFile(url: url, data: manager.getKarabinerConfig())
             restartKarabiner()
