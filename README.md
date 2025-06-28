@@ -62,7 +62,4 @@ karabou list --config-path ~/my-karabiner.json
 ``` 
 
 ### Bugs
-- [x] ~~Restarting karabiner results in an error message even when it works: "Could not find service "org.pqrs.karabiner.karabiner_console_user_server" in domain for user gui: 501"~~ **FIXED**
-- [x] ~~Duplicate key code + modifiers keep getting identified~~ **FIXED**
-- [x] ~~Broken tests~~ **FIXED**
-- [x] ~~Helper applications and plugins show up since we're fetching all running applications. Maybe just add the ability to search and remove the 5 result limit. The minimum score should help prevent the results from getting too unweildy.~~ **FIXED** (Added comprehensive filtering and increased result limit to 10) 
+- [ ] The karabiner app opens after restarts. Ideally this doesn't happen.
