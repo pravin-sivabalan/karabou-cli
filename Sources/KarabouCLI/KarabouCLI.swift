@@ -89,8 +89,6 @@ struct KarabouCLI: ParsableCommand {
             restartKarabiner()
 
             print("Rule added successfully")
-        default:
-            print("Not implemented")
         }
     }
 }
