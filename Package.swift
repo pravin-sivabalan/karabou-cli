@@ -12,17 +12,16 @@ let package = Package(
     ],
     targets: [
         .executableTarget(
-            name: "karabou",
+            name: "KarabouCLI",
             dependencies: [
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
                 .product(name: "Noora", package: "Noora"),
             ]),
         .testTarget(
-            name: "karabouTests",
-            dependencies: ["karabou"],
+            name: "karabou-cliTests",
+            dependencies: ["KarabouCLI"],
             resources: [
-                .process("resources/input_golden_config_1.json"),
-                .process("resources/output_golden_config_1.json"),
+                .process("resources"),
             ]),
     ]
 ) 

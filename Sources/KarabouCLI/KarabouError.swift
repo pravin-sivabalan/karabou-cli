@@ -10,6 +10,7 @@ enum KarabouError: Error, LocalizedError {
     case keyMappingNotFound(String, String)
     case fileNotFound(String)
     case invalidJsonFormat(String)
+    case mappingAlreadyExists(keyCode: String, modifier: String, existingApp: String)
     
     var errorDescription: String? {
         switch self {
@@ -31,6 +32,8 @@ enum KarabouError: Error, LocalizedError {
             return "File not found at: \(path)"
         case .invalidJsonFormat(let details):
             return "Invalid JSON format: \(details)"
+        case .mappingAlreadyExists(let keyCode, let modifier, let existingApp):
+            return "Key mapping for '\(keyCode) + \(modifier)' already exists for app '\(existingApp)'. Please remove the existing mapping first"
         }
     }
 }

@@ -19,12 +19,13 @@ class KarabinerConfigManager {
                     let modifier = manipulator.from.modifiers?.mandatory?.first ?? ""
                     let hash = encodeKeyAndModifier(keyCode: keyCode, modifier: modifier)
 
-                    if mappings.contains(where: { $0.key == hash }) {
+                    if mappings[hash] != nil {
                         keysWithDuplicateMappings.append(hash)
                     }
 
                     if let app = manipulator.to?.first?.softwareFunction?.openApplication {
                         mappings[hash] = app.bundleIdentifier
+                        mappedKeyAndModifier.insert(hash)
                     }
                 }
             }
@@ -41,8 +42,9 @@ class KarabinerConfigManager {
         }
 
         let hash = encodeKeyAndModifier(keyCode: keyCode, modifier: modifier)
-        guard !mappedKeyAndModifier.contains(hash) else {
-            throw KarabouError.duplicateKeyMapping(keyCode, modifier)
+        if mappedKeyAndModifier.contains(hash) {
+            let existingApp = mappings[hash] ?? "unknown"
+            throw KarabouError.mappingAlreadyExists(keyCode: keyCode, modifier: modifier, existingApp: existingApp)
         }
 
         var newRules = karabinerConfig.profiles.first?.complexModifications.rules ?? []

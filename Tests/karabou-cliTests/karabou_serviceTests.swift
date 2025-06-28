@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import karabou_cli
+@testable import KarabouCLI
 
 class KarabouCLITests: XCTestCase {
     let GOOGLE_CHROME = App(
@@ -151,20 +151,22 @@ class KarabouCLITests: XCTestCase {
         }
     }
 
-    func testConfigManager_addAppOpen_duplicateKeyMapping() throws {
+    func testConfigManager_addAppOpen_throwsErrorWhenMappingExists() throws {
         let config = createEmptyConfig()
         let manager = KarabinerConfigManager(
             karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
 
+        // Add initial mapping
         try manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
         
+        // Try to add another mapping for the same key combination
         XCTAssertThrowsError(try manager.addAppOpen(keyCode: "z", modifier: "right_command", app: GOOGLE_CHROME)) { error in
-            XCTAssertTrue(error is KarabouError)
-            if case .duplicateKeyMapping(let keyCode, let modifier) = error as? KarabouError {
+            if case KarabouError.mappingAlreadyExists(let keyCode, let modifier, let existingApp) = error {
                 XCTAssertEqual(keyCode, "z")
                 XCTAssertEqual(modifier, "right_command")
+                XCTAssertEqual(existingApp, "com.apple.Music")
             } else {
-                XCTFail("Expected duplicateKeyMapping error")
+                XCTFail("Expected mappingAlreadyExists error, got \(error)")
             }
         }
     }

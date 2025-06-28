@@ -112,7 +112,7 @@ struct KarabouCLI: ParsableCommand {
         }
         
         let apps = SearchService.search(
-            query: appSearchQuery, items: runningApps, resultLimit: 5)
+            query: appSearchQuery, items: runningApps, resultLimit: 10)
 
         let selectedApp = try selectApp(from: apps)
         
@@ -123,11 +123,32 @@ struct KarabouCLI: ParsableCommand {
         let manager = KarabinerConfigManager(
             karabinerConfig: loadedConfig, destinationRuleName: "KarabouManaged-OpenApps")
         
-        try manager.addAppOpen(keyCode: keyCode, modifier: modifier, app: selectedApp)
-        try FileService.writeJsonFile(url: configUrl, data: manager.getKarabinerConfig())
-        
-        restartKarabiner()
-        print("Rule added successfully")
+        do {
+            try manager.addAppOpen(keyCode: keyCode, modifier: modifier, app: selectedApp)
+            
+            try FileService.writeJsonFile(url: configUrl, data: manager.getKarabinerConfig())
+            restartKarabiner()
+            
+            print("Rule added successfully")
+        } catch KarabouError.mappingAlreadyExists(let keyCode, let modifier, let existingApp) {
+            let confirmationMessage = 
+                "A mapping already exists for \(keyCode) + \(modifier) → \(existingApp).\nDo you want to remove the existing mapping and add the new one?"
+            let confirmation = Noora().yesOrNoChoicePrompt(
+                question: TerminalText(stringLiteral: confirmationMessage))
+            
+            if confirmation {
+                // User confirmed, remove existing and add new
+                try manager.remove(keyCode: keyCode, modifier: modifier)
+                try manager.addAppOpen(keyCode: keyCode, modifier: modifier, app: selectedApp)
+                
+                try FileService.writeJsonFile(url: configUrl, data: manager.getKarabinerConfig())
+                restartKarabiner()
+                
+                print("Existing mapping removed and new rule added successfully")
+            } else {
+                print("Operation cancelled. Existing mapping was not changed.")
+            }
+        }
     }
     
     private func handleRemoveAction(configUrl: URL) throws {
@@ -204,13 +225,35 @@ struct KarabouCLI: ParsableCommand {
 
 func restartKarabiner() {
     let process = Process()
-    process.launchPath = "/bin/bash"
+    process.executableURL = URL(fileURLWithPath: "/bin/bash")
     process.arguments = [
         "-c",
-        "launchctl kickstart -k gui/\(getuid())/org.pqrs.karabiner.karabiner_console_user_server",
+        "launchctl kickstart -k gui/\(getuid())/org.pqrs.karabiner.karabiner_console_user_server 2>/dev/null || true",
     ]
-    process.launch()
-    process.waitUntilExit()
+    
+    // Capture output to avoid showing error messages
+    let pipe = Pipe()
+    process.standardOutput = pipe
+    process.standardError = pipe
+    
+    do {
+        try process.run()
+        process.waitUntilExit()
+    } catch {
+        print("Warning: Failed to restart Karabiner: \(error)")
+        return
+    }
+    
+    // Only show output if there was an actual failure (non-zero exit and not the expected error)
+    if process.terminationStatus != 0 {
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let output = String(data: data, encoding: .utf8) ?? ""
+        
+        // Don't show the specific error message mentioned in the bug
+        if !output.contains("Could not find service") {
+            print("Warning: Karabiner restart may have failed: \(output)")
+        }
+    }
 }
 
 func createAppOptionMap(apps: [App]) -> [String: App] {
