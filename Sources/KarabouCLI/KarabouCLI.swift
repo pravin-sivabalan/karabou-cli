@@ -51,16 +51,22 @@ struct KarabouCLI: ParsableCommand {
             }
 
             // TODO: parallelize file read and getRunningApps+search
-            // TODO: Add confirmation prompt for app selection
             let runningApps = try AppsService.getRunningApps()
             let apps = SearchService.search(
                 query: appSearchQuery!, items: runningApps, resultLimit: 5)
             
             var appOption: App?
             if apps.count == 0 {
-                throw ValidationError("No apps found matching the search query")
+                throw ValidationError("No running apps found matching the search query. We can only lookup apps that are currently running.")
             } else if apps.count == 1 {
-                appOption = apps[0]
+                let app = apps[0]
+                let confirmationMessage = "Found one matching app: \(app.name) (\(app.bundleIdentifier)). Do you want to select this app?"
+                let confirmation = Noora().confirmationPrompt(question: confirmationMessage)
+                if confirmation {
+                    appOption = app
+                } else {
+                    throw ValidationError("App selection cancelled")
+                }
             } else {
                 let appOptionMap = createAppOptionMap(apps: apps)
                 let selectedOption = Noora().singleChoicePrompt(

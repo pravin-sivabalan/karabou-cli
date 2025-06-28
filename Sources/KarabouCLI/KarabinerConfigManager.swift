@@ -12,6 +12,7 @@ class KarabinerConfigManager {
         self.destinationRuleName = destinationRuleName
 
         var keysWithDuplicateMappings: [String] = []
+        var rulesWithDuplicateMappings: [String] = []
         for profile in karabinerConfig.profiles {
             for rule in profile.complexModifications.rules {
                 for manipulator in rule.manipulators {
@@ -25,6 +26,15 @@ class KarabinerConfigManager {
 
                     if let app = manipulator.to?.first?.softwareFunction?.openApplication {
                         mappings[hash] = app.bundleIdentifier
+
+                    let hash = getKeyAndModifierHash(
+                        keyCode: manipulator.from.keyCode,
+                        modifier: manipulator.from.modifiers?.mandatory?.first ?? "")
+                    if mappedKeyAndModifier.contains(hash) {
+                        keysWithDuplicateMappings.append(hash)
+                        rulesWithDuplicateMappings.append(rule.description)
+                    } else {
+                        mappedKeyAndModifier.insert(hash)
                     }
                 }
             }
@@ -49,10 +59,15 @@ class KarabinerConfigManager {
         }
 
         var newRules = karabinerConfig.profiles.first?.complexModifications.rules ?? []
-        let managedManipulators =
-            newRules.filter { rule in
-                rule.description == destinationRuleName
-            }.first?.manipulators ?? []
+        let managedManipulatorIndex = newRules.firstIndex { rule in
+            rule.description == destinationRuleName
+        }
+        var managedManipulators: [Manipulator] = []
+        if let managedManipulatorIndex = managedManipulatorIndex {
+            managedManipulators = newRules[managedManipulatorIndex].manipulators
+            newRules.remove(at: managedManipulatorIndex)
+        }
+
         let newManipulator = createManipulator(keyCode: keyCode, modifier: modifier, app: app)
         let newManipulators = managedManipulators + [newManipulator]
 
@@ -114,8 +129,6 @@ class KarabinerConfigManager {
         }
     }
 
-    // should still check across rules to make sure there are not duplicate mappings
-    // if there are throw an error.
     public func hasManipulator(keyCode: String, modifier: String) -> Bool {
         return mappedKeyAndModifier.contains(encodeKeyAndModifier(keyCode: keyCode, modifier: modifier))
     }
