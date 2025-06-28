@@ -12,7 +12,6 @@ class KarabinerConfigManager {
         self.destinationRuleName = destinationRuleName
 
         var keysWithDuplicateMappings: [String] = []
-        var rulesWithDuplicateMappings: [String] = []
         for profile in karabinerConfig.profiles {
             for rule in profile.complexModifications.rules {
                 for manipulator in rule.manipulators {
@@ -26,15 +25,6 @@ class KarabinerConfigManager {
 
                     if let app = manipulator.to?.first?.softwareFunction?.openApplication {
                         mappings[hash] = app.bundleIdentifier
-
-                    let hash = getKeyAndModifierHash(
-                        keyCode: manipulator.from.keyCode,
-                        modifier: manipulator.from.modifiers?.mandatory?.first ?? "")
-                    if mappedKeyAndModifier.contains(hash) {
-                        keysWithDuplicateMappings.append(hash)
-                        rulesWithDuplicateMappings.append(rule.description)
-                    } else {
-                        mappedKeyAndModifier.insert(hash)
                     }
                 }
             }

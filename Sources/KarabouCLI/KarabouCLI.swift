@@ -8,11 +8,11 @@ struct KarabouCLI: ParsableCommand {
         commandName: "karabou",
         abstract: "A command line tool for managing Karabiner-Elements configurations",
         discussion: """
-        Actions:
-        • add: Add a new key mapping to open an application
-        • remove: Remove an existing key mapping
-        • list: List all karabou-managed key mappings
-        """
+            Actions:
+            • add: Add a new key mapping to open an application
+            • remove: Remove an existing key mapping
+            • list: List all karabou-managed key mappings
+            """
     )
 
     enum Action: String, CaseIterable, ExpressibleByArgument {
@@ -54,14 +54,18 @@ struct KarabouCLI: ParsableCommand {
             let runningApps = try AppsService.getRunningApps()
             let apps = SearchService.search(
                 query: appSearchQuery!, items: runningApps, resultLimit: 5)
-            
+
             var appOption: App?
             if apps.count == 0 {
-                throw ValidationError("No running apps found matching the search query. We can only lookup apps that are currently running.")
+                throw ValidationError(
+                    "No running apps found matching the search query. We can only lookup apps that are currently running."
+                )
             } else if apps.count == 1 {
                 let app = apps[0]
-                let confirmationMessage = "Found one matching app: \(app.name) (\(app.bundleIdentifier)). Do you want to select this app?"
-                let confirmation = Noora().confirmationPrompt(question: confirmationMessage)
+                let confirmationMessage =
+                    "Found one matching app: \(app.name) (\(app.bundleIdentifier)). Do you want to select this app?"
+                let confirmation = Noora().yesOrNoChoicePrompt(
+                    question: TerminalText(stringLiteral: confirmationMessage))
                 if confirmation {
                     appOption = app
                 } else {
@@ -104,12 +108,12 @@ struct KarabouCLI: ParsableCommand {
 
             let manager = KarabinerConfigManager(
                 karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
-            
+
             if !manager.hasManipulator(keyCode: keyCode!, modifier: modifier) {
                 print("No rule found for key code '\(keyCode!)' with modifier '\(modifier)'")
                 return
             }
-            
+
             manager.remove(keyCode: keyCode!, modifier: modifier)
 
             if manager.isModified() {
@@ -124,9 +128,9 @@ struct KarabouCLI: ParsableCommand {
 
             let manager = KarabinerConfigManager(
                 karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
-            
+
             let mappings = manager.listMappings()
-            
+
             if mappings.isEmpty {
                 Noora().warning(.alert("No karabou-managed rules found"))
             } else {
@@ -150,8 +154,8 @@ func restartKarabiner() {
     process.waitUntilExit()
 }
 
-func createAppOptionMap(apps: [App]) -> [String:App] {
-    var appOptions: [String:App] = [:]
+func createAppOptionMap(apps: [App]) -> [String: App] {
+    var appOptions: [String: App] = [:]
     for app in apps {
         let optionString = "\(app.name) (\(app.bundleIdentifier)): \(app.appPath)"
         appOptions[optionString] = app
