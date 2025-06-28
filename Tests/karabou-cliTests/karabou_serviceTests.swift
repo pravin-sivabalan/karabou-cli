@@ -120,7 +120,7 @@ class KarabouCLITests: XCTestCase {
         let manager = KarabinerConfigManager(
             karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
 
-        manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
+        try manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
         
         XCTAssertEqual(manager.hasManipulator(keyCode: "z", modifier: "right_command"), true)
     }
@@ -130,10 +130,30 @@ class KarabouCLITests: XCTestCase {
         let manager = KarabinerConfigManager(
             karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
 
-        manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
+        try manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
         manager.remove(keyCode: "z", modifier: "right_command")
 
         XCTAssertEqual(manager.hasManipulator(keyCode: "z", modifier: "right_command"), false)
+    }
+
+    func testConfigManager_addAppOpen_throwsErrorWhenMappingExists() throws {
+        let config = createEmptyConfig()
+        let manager = KarabinerConfigManager(
+            karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
+
+        // Add initial mapping
+        try manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
+        
+        // Try to add another mapping for the same key combination
+        XCTAssertThrowsError(try manager.addAppOpen(keyCode: "z", modifier: "right_command", app: GOOGLE_CHROME)) { error in
+            if case KarabouError.mappingAlreadyExists(let keyCode, let modifier, let existingApp) = error {
+                XCTAssertEqual(keyCode, "z")
+                XCTAssertEqual(modifier, "right_command")
+                XCTAssertEqual(existingApp, "com.apple.Music")
+            } else {
+                XCTFail("Expected mappingAlreadyExists error, got \(error)")
+            }
+        }
     }
 
     func testGoldenDiff1() throws {
@@ -143,7 +163,7 @@ class KarabouCLITests: XCTestCase {
         // TODO: add a file path test case
         let manager = KarabinerConfigManager(
             karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
-        manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
+        try manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
         // manager.remove(keyCode: "j", modifier: "right_command")
         let actualConfig = manager.getKarabinerConfig()
 
