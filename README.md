@@ -19,12 +19,47 @@ It will also restart the Karabiner Elements application so that the update confi
 
 ### Usage
 
-Sample usage:
-* `karabou add --key-code z --app-name "Google Chrome"`
-* `karabou remove --key-code z`
+The CLI supports three actions:
 
-Default --modifier: right_command
-Default --config-path: ~/.config/karabiner/karabiner.json 
+#### Add Action
+Add a new key mapping to open an application:
+```bash
+karabou add --key-code z --app-search-query "Google Chrome"
+```
+
+#### Remove Action
+Remove an existing key mapping:
+```bash
+karabou remove --key-code z
+```
+
+#### List Action
+List all karabou-managed key mappings:
+```bash
+karabou list
+```
+
+#### Options
+* `--modifier`: Key modifier (default: `right_command`)
+* `--config-path`: Path to Karabiner configuration file (default: `~/.config/karabiner/karabiner.json`)
+
+#### Examples
+```bash
+# Add a mapping for Command+Z to open Chrome
+karabou add --key-code z --app-search-query "Chrome"
+
+# Add a mapping with specific modifier
+karabou add --key-code x --app-search-query "VSCode" --modifier right_command
+
+# Remove a mapping
+karabou remove --key-code z
+
+# List all mappings
+karabou list
+
+# Use custom config path
+karabou list --config-path ~/my-karabiner.json
+``` 
 
 ### Notes
 * KarabinerConfig: Responsible for updating the KarabinerConfig. It will read/write to the configuration file and restart the app.

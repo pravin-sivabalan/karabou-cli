@@ -73,23 +73,26 @@ class KarabinerConfigManager {
         }
 
         let hash = getKeyAndModifierHash(keyCode: keyCode, modifier: modifier)
-        guard !mappedKeyAndModifier.contains(hash) else {
-            print("Warning: KeyCode \(keyCode) not mapped")
+        guard mappedKeyAndModifier.contains(hash) else {
+            print("Warning: KeyCode \(keyCode) with modifier \(modifier) not mapped")
             // TODO: throw an error, remove should be handled by the caller
             return
         }
 
         var newRules = karabinerConfig.profiles.first?.complexModifications.rules ?? []
-        let indexOfManipulatorToRemove = newRules.firstIndex { rule in
-            rule.manipulators.contains { manipulator in
-                manipulator.from.keyCode == keyCode
-                    && manipulator.from.modifiers?.mandatory?.contains(modifier) == true
-            }
-        }
-        if let indexOfManipulatorToRemove = indexOfManipulatorToRemove {
-            newRules[indexOfManipulatorToRemove].manipulators.removeAll { manipulator in
-                manipulator.from.keyCode == keyCode
-                    && manipulator.from.modifiers?.mandatory?.contains(modifier) == true
+        
+        // Remove the manipulator from the managed rule
+        for i in 0..<newRules.count {
+            if newRules[i].description == destinationRuleName {
+                newRules[i].manipulators.removeAll { manipulator in
+                    manipulator.from.keyCode == keyCode
+                        && manipulator.from.modifiers?.mandatory?.contains(modifier) == true
+                }
+                // If no manipulators left, remove the entire rule
+                if newRules[i].manipulators.isEmpty {
+                    newRules.remove(at: i)
+                }
+                break
             }
         }
 
@@ -97,8 +100,40 @@ class KarabinerConfigManager {
         profile?.complexModifications.rules = newRules
         karabinerConfig.profiles = [profile!]
 
-        mappedKeyAndModifier.remove(getKeyAndModifierHash(keyCode: keyCode, modifier: modifier))
+        mappedKeyAndModifier.remove(hash)
         _isModified = true
+    }
+
+    public func listMappings() -> [(keyCode: String, modifier: String, app: App)] {
+        var mappings: [(keyCode: String, modifier: String, app: App)] = []
+        
+        for profile in karabinerConfig.profiles {
+            for rule in profile.complexModifications.rules {
+                if rule.description == destinationRuleName {
+                    for manipulator in rule.manipulators {
+                        if let modifier = manipulator.from.modifiers?.mandatory?.first,
+                           let to = manipulator.to?.first,
+                           let bundleIdentifier = to.softwareFunction?.openApplication.bundleIdentifier {
+                            
+                            // Create a simplified App object for listing
+                            let app = App(
+                                name: "Unknown", // We don't store the name in config
+                                bundleIdentifier: bundleIdentifier,
+                                appPath: "Unknown" // We don't store the path in config
+                            )
+                            
+                            mappings.append((
+                                keyCode: manipulator.from.keyCode,
+                                modifier: modifier,
+                                app: app
+                            ))
+                        }
+                    }
+                }
+            }
+        }
+        
+        return mappings
     }
 
     // should still check across rules to make sure there are not duplicate mappings

@@ -6,23 +6,29 @@ import Noora
 struct KarabouCLI: ParsableCommand {
     static let configuration = CommandConfiguration(
         commandName: "karabou",
-        abstract: "A command line tool for managing Karabiner-Elements configurations"
+        abstract: "A command line tool for managing Karabiner-Elements configurations",
+        discussion: """
+        Actions:
+        • add: Add a new key mapping to open an application
+        • remove: Remove an existing key mapping
+        • list: List all karabou-managed key mappings
+        """
     )
 
     enum Action: String, CaseIterable, ExpressibleByArgument {
         case add
-        // TODO: case remove
-        // TODO: case list
+        case remove
+        case list
     }
 
     @Argument(help: "The action to perform.")
     var action: Action
 
-    // Required.
-    @Option(name: .shortAndLong, help: "The key code to add.")
+    // Required for add and remove actions.
+    @Option(name: .shortAndLong, help: "The key code to add or remove.")
     var keyCode: String?
 
-    // Required
+    // Required for add action
     @Option(name: .shortAndLong, help: "The app to open when the key and modifier are pressed.")
     var appSearchQuery: String?
 
@@ -83,8 +89,49 @@ struct KarabouCLI: ParsableCommand {
             restartKarabiner()
 
             print("Rule added successfully")
-        default:
-            print("Not implemented")
+        case .remove:
+            if keyCode == nil {
+                throw ValidationError("Key code is required for removing a rule")
+            }
+
+            let config = try FileService.readJsonFile(url: url) as KarabinerConfig
+
+            let manager = KarabinerConfigManager(
+                karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
+            
+            if !manager.hasManipulator(keyCode: keyCode!, modifier: modifier) {
+                print("No rule found for key code '\(keyCode!)' with modifier '\(modifier)'")
+                return
+            }
+            
+            manager.remove(keyCode: keyCode!, modifier: modifier)
+
+            if manager.isModified() {
+                try FileService.writeJsonFile(url: url, data: manager.getKarabinerConfig())
+                restartKarabiner()
+                print("Rule removed successfully")
+            } else {
+                print("No changes made")
+            }
+        case .list:
+            let config = try FileService.readJsonFile(url: url) as KarabinerConfig
+
+            let manager = KarabinerConfigManager(
+                karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
+            
+            let mappings = manager.listMappings()
+            
+            if mappings.isEmpty {
+                print("No karabou-managed rules found")
+            } else {
+                print("Found \(mappings.count) karabou-managed rule(s):")
+                print()
+                for (index, mapping) in mappings.enumerated() {
+                    print("  \(index + 1). Key: \(mapping.keyCode) + \(mapping.modifier)")
+                    print("     App: \(mapping.app.bundleIdentifier)")
+                    print()
+                }
+            }
         }
     }
 }
