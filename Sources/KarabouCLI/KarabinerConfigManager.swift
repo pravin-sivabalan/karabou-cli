@@ -5,6 +5,7 @@ class KarabinerConfigManager {
     private var _isModified: Bool = false
     private let destinationRuleName: String
     private var mappedKeyAndModifier: Set<String> = Set<String>()  // make this an app of keycode to app
+    private var mappings: [String: String] = [:]
 
     init(karabinerConfig: KarabinerConfig, destinationRuleName: String) {
         self.karabinerConfig = karabinerConfig
@@ -14,20 +15,23 @@ class KarabinerConfigManager {
         for profile in karabinerConfig.profiles {
             for rule in profile.complexModifications.rules {
                 for manipulator in rule.manipulators {
-                    let hash = getKeyAndModifierHash(
-                        keyCode: manipulator.from.keyCode,
-                        modifier: manipulator.from.modifiers?.mandatory?.first ?? "")
-                    if mappedKeyAndModifier.contains(hash) {
+                    let keyCode = manipulator.from.keyCode
+                    let modifier = manipulator.from.modifiers?.mandatory?.first ?? ""
+                    let hash = encodeKeyAndModifier(keyCode: keyCode, modifier: modifier)
+
+                    if mappings.contains(where: { $0.key == hash }) {
                         keysWithDuplicateMappings.append(hash)
-                    } else {
-                        mappedKeyAndModifier.insert(hash)
+                    }
+
+                    if let app = manipulator.to?.first?.softwareFunction?.openApplication {
+                        mappings[hash] = app.bundleIdentifier
                     }
                 }
             }
         }
 
         if keysWithDuplicateMappings.count > 0 {
-            print("Warning: KeyCode \(keysWithDuplicateMappings) already mapped")
+            print("Warning: KeyCode \(keysWithDuplicateMappings) have duplicate mappings")
         }
     }
 
@@ -38,7 +42,7 @@ class KarabinerConfigManager {
             return
         }
 
-        let hash = getKeyAndModifierHash(keyCode: keyCode, modifier: modifier)
+        let hash = encodeKeyAndModifier(keyCode: keyCode, modifier: modifier)
         guard !mappedKeyAndModifier.contains(hash) else {
             // TODO: throw an error, caller should remove first
             return
@@ -72,7 +76,7 @@ class KarabinerConfigManager {
             return
         }
 
-        let hash = getKeyAndModifierHash(keyCode: keyCode, modifier: modifier)
+        let hash = encodeKeyAndModifier(keyCode: keyCode, modifier: modifier)
         guard mappedKeyAndModifier.contains(hash) else {
             print("Warning: KeyCode \(keyCode) with modifier \(modifier) not mapped")
             // TODO: throw an error, remove should be handled by the caller
@@ -104,42 +108,16 @@ class KarabinerConfigManager {
         _isModified = true
     }
 
-    public func listMappings() -> [(keyCode: String, modifier: String, app: App)] {
-        var mappings: [(keyCode: String, modifier: String, app: App)] = []
-        
-        for profile in karabinerConfig.profiles {
-            for rule in profile.complexModifications.rules {
-                if rule.description == destinationRuleName {
-                    for manipulator in rule.manipulators {
-                        if let modifier = manipulator.from.modifiers?.mandatory?.first,
-                           let to = manipulator.to?.first,
-                           let bundleIdentifier = to.softwareFunction?.openApplication.bundleIdentifier {
-                            
-                            // Create a simplified App object for listing
-                            let app = App(
-                                name: "Unknown", // We don't store the name in config
-                                bundleIdentifier: bundleIdentifier,
-                                appPath: "Unknown" // We don't store the path in config
-                            )
-                            
-                            mappings.append((
-                                keyCode: manipulator.from.keyCode,
-                                modifier: modifier,
-                                app: app
-                            ))
-                        }
-                    }
-                }
-            }
+    public func listMappings() -> [(mapping: String, appName: String)] {
+        return mappings.map { (key, value) in
+            return (mapping: key, appName: value)
         }
-        
-        return mappings
     }
 
     // should still check across rules to make sure there are not duplicate mappings
     // if there are throw an error.
     public func hasManipulator(keyCode: String, modifier: String) -> Bool {
-        return mappedKeyAndModifier.contains(getKeyAndModifierHash(keyCode: keyCode, modifier: modifier))
+        return mappedKeyAndModifier.contains(encodeKeyAndModifier(keyCode: keyCode, modifier: modifier))
     }
 
     public func getKarabinerConfig() -> KarabinerConfig {
@@ -172,7 +150,7 @@ class KarabinerConfigManager {
             type: "basic")
     }
 
-    private func getKeyAndModifierHash(keyCode: String, modifier: String) -> String {
-        return "\(keyCode)-\(modifier)"
+    private func encodeKeyAndModifier(keyCode: String, modifier: String) -> String {
+        return "\(keyCode) + \(modifier)"
     }
 }

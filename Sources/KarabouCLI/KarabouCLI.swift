@@ -122,14 +122,11 @@ struct KarabouCLI: ParsableCommand {
             let mappings = manager.listMappings()
             
             if mappings.isEmpty {
-                print("No karabou-managed rules found")
+                Noora().warning(.alert("No karabou-managed rules found"))
             } else {
                 print("Found \(mappings.count) karabou-managed rule(s):")
-                print()
-                for (index, mapping) in mappings.enumerated() {
-                    print("  \(index + 1). Key: \(mapping.keyCode) + \(mapping.modifier)")
-                    print("     App: \(mapping.app.bundleIdentifier)")
-                    print()
+                for mapping in mappings {
+                    print("(\(mapping.mapping)) ▸ \(mapping.appName)")
                 }
             }
         }
