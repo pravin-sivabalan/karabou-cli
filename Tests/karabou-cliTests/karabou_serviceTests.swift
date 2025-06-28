@@ -120,7 +120,7 @@ class KarabouCLITests: XCTestCase {
         let manager = KarabinerConfigManager(
             karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
 
-        manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
+        try manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
         
         XCTAssertEqual(manager.hasManipulator(keyCode: "z", modifier: "right_command"), true)
     }
@@ -130,20 +130,69 @@ class KarabouCLITests: XCTestCase {
         let manager = KarabinerConfigManager(
             karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
 
-        manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
-        manager.remove(keyCode: "z", modifier: "right_command")
+        try manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
+        try manager.remove(keyCode: "z", modifier: "right_command")
 
         XCTAssertEqual(manager.hasManipulator(keyCode: "z", modifier: "right_command"), false)
+    }
+
+    func testConfigManager_addAppOpen_unsupportedModifier() throws {
+        let config = createEmptyConfig()
+        let manager = KarabinerConfigManager(
+            karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
+
+        XCTAssertThrowsError(try manager.addAppOpen(keyCode: "z", modifier: "left_command", app: APPLE_MUSIC)) { error in
+            XCTAssertTrue(error is KarabouError)
+            if case .unsupportedModifier(let modifier) = error as? KarabouError {
+                XCTAssertEqual(modifier, "left_command")
+            } else {
+                XCTFail("Expected unsupportedModifier error")
+            }
+        }
+    }
+
+    func testConfigManager_addAppOpen_duplicateKeyMapping() throws {
+        let config = createEmptyConfig()
+        let manager = KarabinerConfigManager(
+            karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
+
+        try manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
+        
+        XCTAssertThrowsError(try manager.addAppOpen(keyCode: "z", modifier: "right_command", app: GOOGLE_CHROME)) { error in
+            XCTAssertTrue(error is KarabouError)
+            if case .duplicateKeyMapping(let keyCode, let modifier) = error as? KarabouError {
+                XCTAssertEqual(keyCode, "z")
+                XCTAssertEqual(modifier, "right_command")
+            } else {
+                XCTFail("Expected duplicateKeyMapping error")
+            }
+        }
+    }
+
+    func testConfigManager_remove_keyMappingNotFound() throws {
+        let config = createEmptyConfig()
+        let manager = KarabinerConfigManager(
+            karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
+
+        XCTAssertThrowsError(try manager.remove(keyCode: "z", modifier: "right_command")) { error in
+            XCTAssertTrue(error is KarabouError)
+            if case .keyMappingNotFound(let keyCode, let modifier) = error as? KarabouError {
+                XCTAssertEqual(keyCode, "z")
+                XCTAssertEqual(modifier, "right_command")
+            } else {
+                XCTFail("Expected keyMappingNotFound error")
+            }
+        }
     }
 
     func testGoldenDiff1() throws {
         let inputUrl = Bundle.module.url(forResource: "input_golden_config_1", withExtension: "json")
         let config = try FileService.readJsonFile(url: inputUrl!) as KarabinerConfig
 
-        // TODO: add a file path test case
+        // Test adding a new app mapping to an existing configuration
         let manager = KarabinerConfigManager(
             karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
-        manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
+        try manager.addAppOpen(keyCode: "z", modifier: "right_command", app: APPLE_MUSIC)
         // manager.remove(keyCode: "j", modifier: "right_command")
         let actualConfig = manager.getKarabinerConfig()
 
