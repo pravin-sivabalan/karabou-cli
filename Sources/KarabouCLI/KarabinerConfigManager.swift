@@ -38,9 +38,7 @@ class KarabinerConfigManager {
 
     public func addAppOpen(keyCode: String, modifier: String, app: App) throws {
         if modifier != "right_command" {
-            // TODO: throw an error
-            print("Warning: Modifier \(modifier) not supported")
-            return
+            throw KarabouError.unsupportedModifier(modifier)
         }
 
         let hash = encodeKeyAndModifier(keyCode: keyCode, modifier: modifier)
@@ -75,18 +73,14 @@ class KarabinerConfigManager {
         _isModified = true
     }
 
-    public func remove(keyCode: String, modifier: String) {
+    public func remove(keyCode: String, modifier: String) throws {
         if modifier != "right_command" {
-            // TODO: throw an error
-            print("Warning: Modifier \(modifier) not supported")
-            return
+            throw KarabouError.unsupportedModifier(modifier)
         }
 
         let hash = encodeKeyAndModifier(keyCode: keyCode, modifier: modifier)
         guard mappedKeyAndModifier.contains(hash) else {
-            print("Warning: KeyCode \(keyCode) with modifier \(modifier) not mapped")
-            // TODO: throw an error, remove should be handled by the caller
-            return
+            throw KarabouError.keyMappingNotFound(keyCode, modifier)
         }
 
         var newRules = karabinerConfig.profiles.first?.complexModifications.rules ?? []

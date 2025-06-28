@@ -44,122 +44,181 @@ struct KarabouCLI: ParsableCommand {
         let expandedPath = (configPath as NSString).expandingTildeInPath
         let url = URL(fileURLWithPath: expandedPath)
 
-        switch action {
-        case .add:
-            if keyCode == nil || appSearchQuery == nil {
-                throw ValidationError("Key code and app are required for adding a rule")
+        do {
+            switch action {
+            case .add:
+                try handleAddAction(configUrl: url)
+            case .remove:
+                try handleRemoveAction(configUrl: url)
+            case .list:
+                try handleListAction(configUrl: url)
             }
+        } catch let error as KarabouError {
+            Noora().error(.alert(error.localizedDescription))
+            throw ExitCode.failure
+        } catch {
+            Noora().error(.alert("An unexpected error occurred: \(error.localizedDescription)"))
+            throw ExitCode.failure
+        }
+    }
+    
+    private func handleAddAction(configUrl: URL) throws {
+        guard let keyCode = keyCode, let appSearchQuery = appSearchQuery else {
+            throw ValidationError("Key code and app are required for adding a rule")
+        }
 
-            // TODO: parallelize file read and getRunningApps+search
-            let runningApps = try AppsService.getRunningApps()
-            let apps = SearchService.search(
-                query: appSearchQuery!, items: runningApps, resultLimit: 10)
+        // Parallelize fetching running apps and reading configuration file using DispatchGroup
+        let dispatchGroup = DispatchGroup()
+        var runningApps: [App] = []
+        var config: KarabinerConfig?
+        var appsError: Error?
+        var configError: Error?
+        
+        // Fetch running apps on background queue
+        dispatchGroup.enter()
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                runningApps = try AppsService.getRunningApps()
+            } catch {
+                appsError = error
+            }
+            dispatchGroup.leave()
+        }
+        
+        // Read config file on another background queue  
+        dispatchGroup.enter()
+        DispatchQueue.global(qos: .userInitiated).async {
+            do {
+                config = try FileService.readJsonFile(url: configUrl) as KarabinerConfig
+            } catch {
+                configError = error
+            }
+            dispatchGroup.leave()
+        }
+        
+        // Wait for both operations to complete
+        dispatchGroup.wait()
+        
+        // Check for errors from parallel operations
+        if let error = appsError {
+            throw error
+        }
+        if let error = configError {
+            throw error
+        }
+        
+        guard let loadedConfig = config else {
+            throw KarabouError.configurationReaderFailed(configUrl.path)
+        }
+        
+        let apps = SearchService.search(
+            query: appSearchQuery, items: runningApps, resultLimit: 10)
 
-            var appOption: App?
-            if apps.count == 0 {
-                throw ValidationError(
-                    "No running apps found matching the search query. We can only lookup apps that are currently running."
-                )
-            } else if apps.count == 1 {
-                let app = apps[0]
-                let confirmationMessage =
-                    "Found one matching app: \(app.name) (\(app.bundleIdentifier)). Do you want to select this app?"
-                let confirmation = Noora().yesOrNoChoicePrompt(
-                    question: TerminalText(stringLiteral: confirmationMessage))
-                if confirmation {
-                    appOption = app
-                } else {
-                    throw ValidationError("App selection cancelled")
-                }
+        let selectedApp = try selectApp(from: apps)
+        
+        print("Selected app: \(selectedApp.name)")
+        print("Selected app path: \(selectedApp.appPath)")
+        print("Selected app bundle identifier: \(selectedApp.bundleIdentifier)")
+
+        let manager = KarabinerConfigManager(
+            karabinerConfig: loadedConfig, destinationRuleName: "KarabouManaged-OpenApps")
+        
+        do {
+            try manager.addAppOpen(keyCode: keyCode, modifier: modifier, app: selectedApp)
+            
+            try FileService.writeJsonFile(url: configUrl, data: manager.getKarabinerConfig())
+            restartKarabiner()
+            
+            print("Rule added successfully")
+        } catch KarabouError.mappingAlreadyExists(let keyCode, let modifier, let existingApp) {
+            let confirmationMessage = 
+                "A mapping already exists for \(keyCode) + \(modifier) → \(existingApp).\nDo you want to remove the existing mapping and add the new one?"
+            let confirmation = Noora().yesOrNoChoicePrompt(
+                question: TerminalText(stringLiteral: confirmationMessage))
+            
+            if confirmation {
+                // User confirmed, remove existing and add new
+                try manager.remove(keyCode: keyCode, modifier: modifier)
+                try manager.addAppOpen(keyCode: keyCode, modifier: modifier, app: selectedApp)
+                
+                try FileService.writeJsonFile(url: configUrl, data: manager.getKarabinerConfig())
+                restartKarabiner()
+                
+                print("Existing mapping removed and new rule added successfully")
             } else {
-                let appOptionMap = createAppOptionMap(apps: apps)
-                let selectedOption = Noora().singleChoicePrompt(
-                    question: "We found \(apps.count) similar apps. Which one do you want to map?",
-                    options: Array(appOptionMap.keys)
-                )
-                appOption = appOptionMap[selectedOption]
+                print("Operation cancelled. Existing mapping was not changed.")
             }
+        }
+    }
+    
+    private func handleRemoveAction(configUrl: URL) throws {
+        guard let keyCode = keyCode else {
+            throw ValidationError("Key code is required for removing a rule")
+        }
 
-            if appOption == nil {
+        let config = try FileService.readJsonFile(url: configUrl) as KarabinerConfig
+        let manager = KarabinerConfigManager(
+            karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
+
+        if !manager.hasManipulator(keyCode: keyCode, modifier: modifier) {
+            Noora().warning(.alert("No rule found for key code '\(keyCode)' with modifier '\(modifier)'"))
+            return
+        }
+
+        try manager.remove(keyCode: keyCode, modifier: modifier)
+
+        if manager.isModified() {
+            try FileService.writeJsonFile(url: configUrl, data: manager.getKarabinerConfig())
+            restartKarabiner()
+            print("Rule removed successfully")
+        } else {
+            print("No changes made")
+        }
+    }
+    
+    private func handleListAction(configUrl: URL) throws {
+        let config = try FileService.readJsonFile(url: configUrl) as KarabinerConfig
+        let manager = KarabinerConfigManager(
+            karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
+
+        let mappings = manager.listMappings()
+
+        if mappings.isEmpty {
+            Noora().warning(.alert("No karabou-managed rules found"))
+        } else {
+            print("Found \(mappings.count) karabou-managed rule(s):")
+            for mapping in mappings {
+                print("(\(mapping.mapping)) ▸ \(mapping.appName)")
+            }
+        }
+    }
+    
+    private func selectApp(from apps: [App]) throws -> App {
+        if apps.count == 0 {
+            throw ValidationError(
+                "No running apps found matching the search query. We can only lookup apps that are currently running."
+            )
+        } else if apps.count == 1 {
+            let app = apps[0]
+            let confirmationMessage =
+                "Found one matching app: \(app.name) (\(app.bundleIdentifier)). Do you want to select this app?"
+            let confirmation = Noora().yesOrNoChoicePrompt(
+                question: TerminalText(stringLiteral: confirmationMessage))
+            if confirmation {
+                return app
+            } else {
+                throw ValidationError("App selection cancelled")
+            }
+        } else {
+            let appOptionMap = createAppOptionMap(apps: apps)
+            let selectedOption = Noora().singleChoicePrompt(
+                question: "We found \(apps.count) similar apps. Which one do you want to map?",
+                options: Array(appOptionMap.keys),
+            )
+            guard let selectedApp = appOptionMap[selectedOption] else {
                 throw ValidationError("No app selected")
             }
-
-            let app = appOption!
-            print("Selected app: \(app.name)")
-            print("Selected app path: \(app.appPath)")
-            print("Selected app bundle identifier: \(app.bundleIdentifier)")
-
-            let config = try FileService.readJsonFile(url: url) as KarabinerConfig
-
-            let manager = KarabinerConfigManager(
-                karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
-            
-            do {
-                try manager.addAppOpen(keyCode: keyCode!, modifier: modifier, app: app)
-                
-                try FileService.writeJsonFile(url: url, data: manager.getKarabinerConfig())
-                restartKarabiner()
-                
-                print("Rule added successfully")
-            } catch KarabouError.mappingAlreadyExists(let keyCode, let modifier, let existingApp) {
-                let confirmationMessage = 
-                    "A mapping already exists for \(keyCode) + \(modifier) → \(existingApp).\nDo you want to remove the existing mapping and add the new one?"
-                let confirmation = Noora().yesOrNoChoicePrompt(
-                    question: TerminalText(stringLiteral: confirmationMessage))
-                
-                if confirmation {
-                    // User confirmed, remove existing and add new
-                    manager.remove(keyCode: keyCode, modifier: modifier)
-                    try manager.addAppOpen(keyCode: keyCode, modifier: modifier, app: app)
-                    
-                    try FileService.writeJsonFile(url: url, data: manager.getKarabinerConfig())
-                    restartKarabiner()
-                    
-                    print("Existing mapping removed and new rule added successfully")
-                } else {
-                    print("Operation cancelled. Existing mapping was not changed.")
-                }
-            }
-        case .remove:
-            if keyCode == nil {
-                throw ValidationError("Key code is required for removing a rule")
-            }
-
-            let config = try FileService.readJsonFile(url: url) as KarabinerConfig
-
-            let manager = KarabinerConfigManager(
-                karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
-
-            if !manager.hasManipulator(keyCode: keyCode!, modifier: modifier) {
-                print("No rule found for key code '\(keyCode!)' with modifier '\(modifier)'")
-                return
-            }
-
-            manager.remove(keyCode: keyCode!, modifier: modifier)
-
-            if manager.isModified() {
-                try FileService.writeJsonFile(url: url, data: manager.getKarabinerConfig())
-                restartKarabiner()
-                print("Rule removed successfully")
-            } else {
-                print("No changes made")
-            }
-        case .list:
-            let config = try FileService.readJsonFile(url: url) as KarabinerConfig
-
-            let manager = KarabinerConfigManager(
-                karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
-
-            let mappings = manager.listMappings()
-
-            if mappings.isEmpty {
-                Noora().warning(.alert("No karabou-managed rules found"))
-            } else {
-                print("Found \(mappings.count) karabou-managed rule(s):")
-                for mapping in mappings {
-                    print("(\(mapping.mapping)) ▸ \(mapping.appName)")
-                }
-            }
+            return selectedApp
         }
     }
 }
