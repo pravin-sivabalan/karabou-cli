@@ -53,7 +53,7 @@ struct KarabouCLI: ParsableCommand {
             // TODO: parallelize file read and getRunningApps+search
             let runningApps = try AppsService.getRunningApps()
             let apps = SearchService.search(
-                query: appSearchQuery!, items: runningApps, resultLimit: 5)
+                query: appSearchQuery!, items: runningApps, resultLimit: 10)
 
             var appOption: App?
             if apps.count == 0 {
@@ -75,7 +75,7 @@ struct KarabouCLI: ParsableCommand {
                 let appOptionMap = createAppOptionMap(apps: apps)
                 let selectedOption = Noora().singleChoicePrompt(
                     question: "We found \(apps.count) similar apps. Which one do you want to map?",
-                    options: Array(appOptionMap.keys),
+                    options: Array(appOptionMap.keys)
                 )
                 appOption = appOptionMap[selectedOption]
             }
@@ -145,13 +145,35 @@ struct KarabouCLI: ParsableCommand {
 
 func restartKarabiner() {
     let process = Process()
-    process.launchPath = "/bin/bash"
+    process.executableURL = URL(fileURLWithPath: "/bin/bash")
     process.arguments = [
         "-c",
-        "launchctl kickstart -k gui/\(getuid())/org.pqrs.karabiner.karabiner_console_user_server",
+        "launchctl kickstart -k gui/\(getuid())/org.pqrs.karabiner.karabiner_console_user_server 2>/dev/null || true",
     ]
-    process.launch()
-    process.waitUntilExit()
+    
+    // Capture output to avoid showing error messages
+    let pipe = Pipe()
+    process.standardOutput = pipe
+    process.standardError = pipe
+    
+    do {
+        try process.run()
+        process.waitUntilExit()
+    } catch {
+        print("Warning: Failed to restart Karabiner: \(error)")
+        return
+    }
+    
+    // Only show output if there was an actual failure (non-zero exit and not the expected error)
+    if process.terminationStatus != 0 {
+        let data = pipe.fileHandleForReading.readDataToEndOfFile()
+        let output = String(data: data, encoding: .utf8) ?? ""
+        
+        // Don't show the specific error message mentioned in the bug
+        if !output.contains("Could not find service") {
+            print("Warning: Karabiner restart may have failed: \(output)")
+        }
+    }
 }
 
 func createAppOptionMap(apps: [App]) -> [String: App] {

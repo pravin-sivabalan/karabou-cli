@@ -1,6 +1,6 @@
 import XCTest
 
-@testable import karabou_cli
+@testable import KarabouCLI
 
 class KarabouCLITests: XCTestCase {
     let GOOGLE_CHROME = App(
