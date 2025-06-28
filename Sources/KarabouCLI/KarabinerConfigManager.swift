@@ -36,7 +36,7 @@ class KarabinerConfigManager {
         }
     }
 
-    public func addAppOpen(keyCode: String, modifier: String, app: App) {
+    public func addAppOpen(keyCode: String, modifier: String, app: App) throws {
         if modifier != "right_command" {
             // TODO: throw an error
             print("Warning: Modifier \(modifier) not supported")
@@ -44,9 +44,9 @@ class KarabinerConfigManager {
         }
 
         let hash = encodeKeyAndModifier(keyCode: keyCode, modifier: modifier)
-        guard !mappedKeyAndModifier.contains(hash) else {
-            // TODO: throw an error, caller should remove first
-            return
+        if mappedKeyAndModifier.contains(hash) {
+            let existingApp = mappings[hash] ?? "unknown"
+            throw KarabouError.mappingAlreadyExists(keyCode: keyCode, modifier: modifier, existingApp: existingApp)
         }
 
         var newRules = karabinerConfig.profiles.first?.complexModifications.rules ?? []

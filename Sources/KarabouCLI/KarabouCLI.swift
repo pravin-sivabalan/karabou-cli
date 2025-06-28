@@ -93,12 +93,33 @@ struct KarabouCLI: ParsableCommand {
 
             let manager = KarabinerConfigManager(
                 karabinerConfig: config, destinationRuleName: "KarabouManaged-OpenApps")
-            manager.addAppOpen(keyCode: keyCode!, modifier: modifier, app: app)
-
-            try FileService.writeJsonFile(url: url, data: manager.getKarabinerConfig())
-            restartKarabiner()
-
-            print("Rule added successfully")
+            
+            do {
+                try manager.addAppOpen(keyCode: keyCode!, modifier: modifier, app: app)
+                
+                try FileService.writeJsonFile(url: url, data: manager.getKarabinerConfig())
+                restartKarabiner()
+                
+                print("Rule added successfully")
+            } catch KarabouError.mappingAlreadyExists(let keyCode, let modifier, let existingApp) {
+                let confirmationMessage = 
+                    "A mapping already exists for \(keyCode) + \(modifier) → \(existingApp).\nDo you want to remove the existing mapping and add the new one?"
+                let confirmation = Noora().yesOrNoChoicePrompt(
+                    question: TerminalText(stringLiteral: confirmationMessage))
+                
+                if confirmation {
+                    // User confirmed, remove existing and add new
+                    manager.remove(keyCode: keyCode, modifier: modifier)
+                    try manager.addAppOpen(keyCode: keyCode, modifier: modifier, app: app)
+                    
+                    try FileService.writeJsonFile(url: url, data: manager.getKarabinerConfig())
+                    restartKarabiner()
+                    
+                    print("Existing mapping removed and new rule added successfully")
+                } else {
+                    print("Operation cancelled. Existing mapping was not changed.")
+                }
+            }
         case .remove:
             if keyCode == nil {
                 throw ValidationError("Key code is required for removing a rule")

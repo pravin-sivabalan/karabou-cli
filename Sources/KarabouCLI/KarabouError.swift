@@ -3,4 +3,5 @@ enum KarabouError: Error {
     case bundleURLNotFound
     case configurationReaderFailed
     case configurationWriterFailed
+    case mappingAlreadyExists(keyCode: String, modifier: String, existingApp: String)
 }
