@@ -8,16 +8,11 @@ A CLI tool for managing Karabiner Elements Complex Modifications quickly and eas
 
 ```bash
 # Add the tap (using existing repository)
-brew tap pravin-sivabalan/karabou-cli
+brew tap pravin-sivabalan/karabou-cli https://github.com/pravin-sivabalan/karabou-cli
 
 # Install karabou (pre-built binary)
 brew install karabou
-
-# Alternative: Install from source (if binary fails)
-brew install karabou-source
 ```
-
-**Note:** The pre-built binary installation is recommended. If you encounter issues, try the source build option or the manual installation method below.
 
 ### Manual Installation
 
