@@ -65,3 +65,14 @@ jobs:
           ```
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
+
+    - name: Calculate SHA256
+      id: shasum
+      run: shasum -a 256 .build/release/KarabouCLI
+
+    - name: Update brew formula
+      uses: brew-bump-formula-action/brew-bump-formula-action@v1
+      with:
+        files: Formula/karabou.rb
+        sha256: ${{ steps.shasum.outputs.sha256 }}
+        version: ${{ github.ref_name }}
