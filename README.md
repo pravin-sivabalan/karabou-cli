@@ -1,5 +1,33 @@
 # Karabou CLI
 
+A CLI tool for managing Karabiner Elements Complex Modifications quickly and easily.
+
+## Installation
+
+### Homebrew (Recommended)
+
+```bash
+# Add the tap (using existing repository)
+brew tap pravin-sivabalan/karabou-cli
+
+# Install karabou
+brew install karabou
+```
+
+### Manual Installation
+
+```bash
+# Clone the repository
+git clone https://github.com/pravin-sivabalan/karabou-cli.git
+cd karabou-cli
+
+# Build the project
+swift build --configuration release
+
+# Install to your system
+cp .build/release/KarabouCLI /usr/local/bin/karabou
+```
+
 ### Problem
 
 I use the Karabiner Elements Complex Modifiers to open my apps. However, it is a pain to add these modifiers. Currently it means finding the app's file path or bundle identifier, then changing
