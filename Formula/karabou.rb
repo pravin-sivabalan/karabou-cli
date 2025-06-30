@@ -1,18 +1,15 @@
 class Karabou < Formula
   desc "CLI for managing Karabiner Elements Complex Modifications"
   homepage "https://github.com/pravin-sivabalan/karabou-cli"
-  url "https://github.com/pravin-sivabalan/karabou-cli/archive/refs/tags/v1.0.0.tar.gz"
-  sha256 "629c7bc0aac0c6c28593a4e0c34dc725f9d3f3028331b28c1a20c10c7e251409"
+  url "https://github.com/pravin-sivabalan/karabou-cli/releases/download/v1.0.0/KarabouCLI"
+  sha256 "YOUR_BINARY_SHA256_HERE"
   license "MIT"
 
   depends_on :macos
 
   def install
-    # Build the binary locally
-    system "swift", "build", "--configuration", "release"
-    
-    # Install the binary
-    bin.install ".build/release/KarabouCLI"
+    # Install the pre-built binary
+    bin.install "KarabouCLI"
     bin.install_symlink "KarabouCLI" => "karabou"
   end
 

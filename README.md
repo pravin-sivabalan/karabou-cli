@@ -14,6 +14,8 @@ brew tap pravin-sivabalan/karabou-cli
 brew install karabou
 ```
 
+**Note:** If you encounter build issues with Homebrew, try the manual installation method below.
+
 ### Manual Installation
 
 ```bash
@@ -27,6 +29,10 @@ swift build --configuration release
 # Install to your system
 cp .build/release/KarabouCLI /usr/local/bin/karabou
 ```
+
+### Download Pre-built Binary
+
+You can also download the latest pre-built binary from the [GitHub releases](https://github.com/pravin-sivabalan/karabou-cli/releases) page.
 
 ### Problem
 
