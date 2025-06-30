@@ -9,7 +9,11 @@ class Karabou < Formula
   depends_on :macos
 
   def install
-    system "swift", "build", "--configuration", "release"
+    # Ensure we're in the right directory
+    system "swift", "package", "resolve"
+    system "swift", "build", "--configuration", "release", "--disable-sandbox"
+    
+    # Install the binary
     bin.install ".build/release/KarabouCLI"
     bin.install_symlink "KarabouCLI" => "karabou"
   end
