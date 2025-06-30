@@ -2,7 +2,7 @@
 
 ### Problem
 
-I use the Karabiner Elements Complex Modifiers to open my apps. However, it is a pain to add these modifiers. Currently it means finding the app's file path or bundle identifier, then opening changing
+I use the Karabiner Elements Complex Modifiers to open my apps. However, it is a pain to add these modifiers. Currently it means finding the app's file path or bundle identifier, then changing
 the JSON configuration, and then restarting the app. I want this to be a lot easier.
 
 ### Solution
@@ -14,6 +14,7 @@ It will also restart the Karabiner Elements application so that the update confi
 
 ### Unsupported
 
+* non-MacOS Platforms
 * Actions other than app opens
 * Key-code validation
 
@@ -63,3 +64,4 @@ karabou list --config-path ~/my-karabiner.json
 
 ### Bugs
 - [ ] The karabiner app opens after restarts. Ideally this doesn't happen.
+- [ ] Remove dependency on Karabiner for mappings.

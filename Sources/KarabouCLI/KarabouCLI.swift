@@ -79,7 +79,7 @@ struct KarabouCLI: ParsableCommand {
         dispatchGroup.enter()
         DispatchQueue.global(qos: .userInitiated).async {
             do {
-                runningApps = try AppsService.getRunningApps()
+                runningApps = try AppsService.getApps()
             } catch {
                 appsError = error
             }
@@ -196,9 +196,7 @@ struct KarabouCLI: ParsableCommand {
     
     private func selectApp(from apps: [App]) throws -> App {
         if apps.count == 0 {
-            throw ValidationError(
-                "No running apps found matching the search query. We can only lookup apps that are currently running."
-            )
+            throw KarabouError.noAppsFound
         } else if apps.count == 1 {
             let app = apps[0]
             let confirmationMessage =
@@ -208,7 +206,7 @@ struct KarabouCLI: ParsableCommand {
             if confirmation {
                 return app
             } else {
-                throw ValidationError("App selection cancelled")
+                throw KarabouError.appSelectionCancelled
             }
         } else {
             let appOptionMap = createAppOptionMap(apps: apps)
@@ -216,10 +214,7 @@ struct KarabouCLI: ParsableCommand {
                 question: "We found \(apps.count) similar apps. Which one do you want to map?",
                 options: Array(appOptionMap.keys),
             )
-            guard let selectedApp = appOptionMap[selectedOption] else {
-                throw ValidationError("No app selected")
-            }
-            return selectedApp
+            return appOptionMap[selectedOption]!
         }
     }
 }

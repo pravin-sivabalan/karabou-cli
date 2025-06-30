@@ -24,6 +24,12 @@ class SearchService {
         return sortedItems.prefix(resultLimit).map { $0.0 }
     }
 
+    private static func logBundleIdsWithScore(scoreItems: [(App, Int)]) {
+        for item in scoreItems {
+            print("(\(item.1)) ▸ \(item.0.bundleIdentifier)")
+        }
+    }
+
     private static func score(for query: String, itemString: String) -> Int {
         let normalizedQuery = query.lowercased()
         // replace the delimiter with a period to make it easier to tokenize
