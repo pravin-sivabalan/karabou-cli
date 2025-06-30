@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: macos-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Setup Swift
+      uses: swift-actions/setup-swift@v1
+      with:
+        swift-version: '5.9'
+    
+    - name: Build
+      run: swift build --configuration release
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: .build/release/KarabouCLI
+        name: Release ${{ github.ref_name }}
+        body: |
+          ## What's Changed
+          
+          Release of karabou CLI version ${{ github.ref_name }}
+          
+          ### Installation
+          
+          ```bash
+          # Add the tap
+          brew tap pravin-sivabalan/karabou-cli
+          
+          # Install karabou
+          brew install karabou
+          ```
+          
+          ### Usage
+          
+          ```bash
+          # Add a mapping for Command+Z to open Chrome
+          karabou add --key-code z --app-search-query "Chrome"
+          
+          # List all mappings
+          karabou list
+          
+          # Remove a mapping
+          karabou remove --key-code z
+          ```
+          
+          ### Manual Installation
+          
+          Download the binary from the assets and place it in your PATH:
+          ```bash
+          chmod +x KarabouCLI
+          sudo mv KarabouCLI /usr/local/bin/karabou
+          ```
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
